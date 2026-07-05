@@ -11,9 +11,13 @@ def add_to_watchlist():
     data = request.json
     if not data or 'match_id' not in data:
         return jsonify({"status": "error", "message": "Match ID is required."}), 400
-        
+    
+    user_id = data.get("user_id")
+    if not user_id:
+        return jsonify({"status": "error", "message": "User ID is required."}), 400
+
     insert_data = {
-        "user_id": data.get("user_id", "1003240033"),
+        "user_id": user_id,
         "match_id": data["match_id"],
         "home_team": data.get("home_team", "Unknown"),
         "away_team": data.get("away_team", "Unknown"),
@@ -38,7 +42,9 @@ def get_watchlist():
     if not supabase:
         return jsonify({"status": "error", "message": "Database connection is not configured."}), 500
     
-    user_id = request.args.get('user_id', '1003240033')
+    user_id = request.args.get('user_id')
+    if not user_id:
+        return jsonify({"status": "error", "message": "User ID parameter is required."}), 400
     
     try:
         response = supabase.table('watchlist').select('*').eq('user_id', user_id).execute()
@@ -46,7 +52,6 @@ def get_watchlist():
     except Exception as e:
         print(f"[Error] Failed to fetch watchlist data: {str(e)}")
         return jsonify({"status": "error", "message": "Failed to retrieve watchlist data."}), 500
-
 
 @watchlist_bp.route('/watchlist/<int:id>', methods=['PUT'])
 def update_watchlist(id):
