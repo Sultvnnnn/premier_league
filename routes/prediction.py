@@ -96,3 +96,62 @@ def submit_prediction():
     except Exception as e:
         print(f"[Error] Failed to save prediction: {str(e)}")
         return jsonify({"status": "error", "message": "Gagal menyimpan prediksi."}), 500
+    
+@prediction_bp.route('/prediction/<int:match_id>/evaluate', methods=['PUT'])
+def evaluate_predictions(match_id):
+    """Mengevaluasi semua tebakan user untuk pertandingan yang sudah selesai."""
+    # Tarik skor asli dari API
+    url = f"{BASE_URL}/matches/{match_id}"
+    response = requests.get(url, headers=HEADERS)
+    
+    if response.status_code != 200:
+        return jsonify({"status": "error", "message": "Gagal mengambil data pertandingan dari API."}), response.status_code
+    
+    match_data = response.json()
+    
+    # Pastikan pertandingan sudah selesai
+    if match_data.get('status') != 'FINISHED':
+        return jsonify({"status": "error", "message": "Pertandingan belum selesai, belum bisa dievaluasi."}), 400
+        
+    actual_home = match_data['score']['fullTime']['home']
+    actual_away = match_data['score']['fullTime']['away']
+    
+    # Ambil semua tebakan yang masih 'pending' untuk match ini di Supabase
+    try:
+        pending_preds = supabase.table('predictions').select('*').eq('match_id', match_id).eq('status', 'pending').execute()
+        
+        if not pending_preds.data:
+            return jsonify({"status": "success", "message": "Tidak ada prediksi pending untuk dievaluasi."}), 200
+            
+        evaluated_count = 0
+        
+        # Bandingkan tebakan dengan skor asli
+        for pred in pending_preds.data:
+            pred_id = pred['id']
+            pred_home = pred['predicted_home_score']
+            pred_away = pred['predicted_away_score']
+            
+            # Logika Cek Status (Bisa dibikin lebih kompleks kalau mau hitung poin)
+            if pred_home == actual_home and pred_away == actual_away:
+                status = 'correct'
+            else:
+                status = 'incorrect'
+                
+            # Update status ke Supabase
+            supabase.table('predictions').update({
+                'actual_home_score': actual_home,
+                'actual_away_score': actual_away,
+                'status': status
+            }).eq('id', pred_id).execute()
+            
+            evaluated_count += 1
+            
+        return jsonify({
+            "status": "success", 
+            "message": f"Berhasil mengevaluasi {evaluated_count} tebakan.",
+            "actual_score": f"{actual_home} - {actual_away}"
+        }), 200
+        
+    except Exception as e:
+        print(f"[Error] Gagal mengevaluasi prediksi: {str(e)}")
+        return jsonify({"status": "error", "message": "Terjadi kesalahan internal saat evaluasi."}), 500
