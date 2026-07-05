@@ -1,133 +1,109 @@
 # ⚽ Premier League API
 
-A lightweight REST API built with **Flask** that wraps the [football-data.org](https://www.football-data.org/) API to serve Premier League data — standings, fixtures, results, top scorers, assists, teams, and squad details.
+A robust REST API built with **Flask** that integrates **football-data.org** for match statistics and **Supabase** for secure user authentication and personalized match watchlists.
 
 ---
 
 ## 🚀 Features
 
-- 📊 **Standings** — Real-time Premier League table
-- 📅 **Fixtures** — Upcoming scheduled matches (filterable by team)
-- 🏁 **Results** — Latest finished matches (filterable by team)
-- 🥇 **Top Scorers** — Leading goal scorers this season
-- 🎯 **Top Assists** — Players with most assists this season
-- 🏟️ **Teams** — All PL clubs with info (crest, venue, colors, etc.)
-- 👥 **Squad** — Full squad & coach details by team ID
+* 📊 **Football Data** — Standings, fixtures, results, top scorers, assists, and squad details.
+* 🔐 **Authentication** — Secure user registration and login powered by **Supabase Auth**.
+* 📋 **Watchlist** — Personalized CRUD functionality to save and manage match notes in the cloud.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Python** + **Flask**
-- **Flask-CORS** — Cross-origin support
-- **Requests** — HTTP client for football-data.org API
-- **football-data.org v4 API**
+* **Python** + **Flask** (Modular with Blueprints)
+* **Supabase** — Backend-as-a-Service for Auth & Database
+* **Flask-CORS** — Cross-origin support
+* **python-dotenv** — Environment variable management
 
 ---
 
 ## ⚙️ Installation & Setup
 
-### 1. Clone the repository
+### 1. Clone & Setup Environment
 
 ```bash
 git clone https://github.com/Sultvnnnn/premier_league.git
 cd premier_league
-```
 
-### 2. Create & activate virtual environment
-
-```bash
+# Create & activate venv
 python -m venv venv
+# Windows: venv\Scripts\activate
+# Mac/Linux: source venv/bin/activate
 
-# Windows
-venv\Scripts\activate
-
-# Mac/Linux
-source venv/bin/activate
-```
-
-### 3. Install dependencies
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 4. Set up API Key
+### 2. Configure Credentials
 
-Get your free API key from [football-data.org](https://www.football-data.org/), then update `app.py`:
+Create a `.env` file in the root directory and add your keys:
 
-```python
-API_KEY = "your_api_key_here"
+```env
+FOOTBALL_API_KEY=your_football_data_key
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_KEY=your_supabase_anon_public_key
 ```
 
-> Alternatively, use a `.env` file to keep your key secure (recommended).
-
-### 5. Run the server
+### 3. Run the server
 
 ```bash
 python app.py
 ```
 
-Server will run at **`http://127.0.0.1:5000`**
-
 ---
 
 ## 📡 API Endpoints
 
+### Football Data
+
 | Method | Endpoint | Description |
-|--------|----------|-------------|
+| --- | --- | --- |
 | `GET` | `/api/standings` | Premier League standings table |
-| `GET` | `/api/fixtures` | Upcoming fixtures (top 10) |
-| `GET` | `/api/fixtures?team=arsenal` | Fixtures filtered by team name |
-| `GET` | `/api/results` | Latest 10 finished matches |
-| `GET` | `/api/results?team=chelsea` | Results filtered by team name |
-| `GET` | `/api/top-scorers` | Top goal scorers this season |
-| `GET` | `/api/top-assists` | Top assist providers this season |
-| `GET` | `/api/teams` | All Premier League teams |
-| `GET` | `/api/teams?team=liverpool` | Search team by name |
-| `GET` | `/api/squad/<team_id>` | Squad & coach details by team ID |
+| `GET` | `/api/fixtures` | Upcoming fixtures |
+| `GET` | `/api/results` | Latest match results |
+| `GET` | `/api/top-scorers` | Top goal scorers |
+| `GET` | `/api/top-assists` | Top assist providers |
+| `GET` | `/api/teams` | List of teams |
+| `GET` | `/api/squad/<team_id>` | Team squad details |
 
----
+### Auth & Watchlist (Supabase)
 
-## 📦 Response Format
-
-All endpoints return a consistent JSON structure:
-
-```json
-{
-  "status": "success",
-  "data": [ ... ]
-}
-```
-
-On error:
-
-```json
-{
-  "status": "error",
-  "message": "Failed to retrieve data."
-}
-```
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/api/register` | Register a new user |
+| `POST` | `/api/login` | Login user |
+| `POST` | `/api/watchlist` | Add match to watchlist |
+| `GET` | `/api/watchlist` | Get user watchlist |
+| `PUT` | `/api/watchlist/<id>` | Update match notes |
+| `DELETE` | `/api/watchlist/<id>` | Remove from watchlist |
 
 ---
 
 ## 📁 Project Structure
 
-```
+```text
 premier_league/
-├── app.py              # Main Flask application & all API routes
+├── app.py              # Application entry point & Blueprints
+├── config.py           # Supabase connection configuration
+├── routes/             # Modular API route handlers
+│   ├── auth.py         # Registration & Login
+│   ├── football.py     # Football data logic
+│   └── watchlist.py    # CRUD operations
+├── .env                # Environment variables (Gitignored)
 ├── requirements.txt    # Python dependencies
-├── .gitignore          # Ignored files (venv, .env, __pycache__)
-└── README.md
+└── ...
 ```
 
 ---
 
 ## 📝 Notes
 
-- This API uses the **free tier** of football-data.org, which has rate limits.
-- CORS is enabled, so this backend can be consumed by any frontend (React, Vue, etc.).
-- The `.env` file is gitignored — never commit your API key to version control.
+* Ensure the **"Confirm email"** setting is **disabled** in your Supabase Auth dashboard for seamless testing.
+* The `.env` file is excluded from version control for security.
 
 ---
 
