@@ -2,11 +2,12 @@ import time
 from threading import Lock
 from flask import Blueprint, jsonify, request
 import requests
+import os
 
 football_bp = Blueprint('football', __name__)
 
-API_KEY = "4da351778ae44a7fb74bcfcb0550db61"
-BASE_URL = "http://api.football-data.org/v4/competitions/PL"
+API_KEY = os.getenv("FOOTBALL_API_KEY")
+BASE_URL = "http://api.football-data.org/v4/competitions"
 HEADERS = {"X-Auth-Token": API_KEY}
 
 _cache: dict[str, tuple[float, object]] = {}
@@ -41,34 +42,39 @@ def _fetch_json(url: str) -> dict:
 
 @football_bp.route('/standings', methods=['GET'])
 def get_standings():
-    cache_key = "standings:table"
+    # Tangkap query parameter, default ke Premier League (PL) jika kosong
+    comp_code = request.args.get('competition', 'PL').upper()
+    cache_key = f"standings:{comp_code}:table"
+    
     cached = _cache_get(cache_key)
     if cached is not None:
         return jsonify({"status": "success", "data": cached}), 200
+        
     try:
-        data = _fetch_json(f"{BASE_URL}/standings")
+        data = _fetch_json(f"{BASE_URL}/{comp_code}/standings")
         standings = data['standings'][0]['table']
         _cache_set(cache_key, standings, TTL_STANDINGS)
         return jsonify({"status": "success", "data": standings}), 200
     except requests.exceptions.RequestException as e:
-        print(f"[Error] Failed to fetch standings data: {str(e)}")
-        return jsonify({"status": "error", "message": "Failed to retrieve Premier League standings data."}), 500
+        print(f"[Error] Failed to fetch standings data for {comp_code}: {str(e)}")
+        return jsonify({"status": "error", "message": f"Failed to retrieve {comp_code} standings data."}), 500
 
-def _get_scheduled_matches_raw():
-    cache_key = "upstream:matches:scheduled"
+def _get_scheduled_matches_raw(comp_code: str):
+    cache_key = f"upstream:matches:scheduled:{comp_code}"
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
-    data = _fetch_json(f"{BASE_URL}/matches?status=SCHEDULED")
+    data = _fetch_json(f"{BASE_URL}/{comp_code}/matches?status=SCHEDULED")
     matches = data.get("matches", [])
     _cache_set(cache_key, matches, TTL_FIXTURES)
     return matches
 
 @football_bp.route('/fixtures', methods=['GET'])
 def get_fixtures():
+    comp_code = request.args.get('competition', 'PL').upper()
     team_query = request.args.get('team')
     try:
-        matches = list(_get_scheduled_matches_raw())
+        matches = list(_get_scheduled_matches_raw(comp_code))
         if team_query:
             tq = team_query.lower()
             matches = [
@@ -80,54 +86,57 @@ def get_fixtures():
             matches = matches[:10]
         return jsonify({"status": "success", "data": matches}), 200
     except requests.exceptions.RequestException as e:
-        print(f"[Error] Failed to fetch fixtures data: {str(e)}")
-        return jsonify({"status": "error", "message": "Failed to retrieve Premier League fixtures data."}), 500
+        print(f"[Error] Failed to fetch fixtures data for {comp_code}: {str(e)}")
+        return jsonify({"status": "error", "message": f"Failed to retrieve {comp_code} fixtures data."}), 500
 
-def _get_scorers_raw():
-    cache_key = "upstream:scorers:pl"
+def _get_scorers_raw(comp_code: str):
+    cache_key = f"upstream:scorers:{comp_code}"
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
-    data = _fetch_json(f"{BASE_URL}/scorers")
+    data = _fetch_json(f"{BASE_URL}/{comp_code}/scorers")
     scorers = data.get("scorers", [])
     _cache_set(cache_key, scorers, TTL_SCORERS)
     return scorers
 
 @football_bp.route('/top-scorers', methods=['GET'])
 def get_top_scorers():
+    comp_code = request.args.get('competition', 'PL').upper()
     try:
-        scorers = list(_get_scorers_raw())
+        scorers = list(_get_scorers_raw(comp_code))
         return jsonify({"status": "success", "data": scorers}), 200
     except requests.exceptions.RequestException as e:
-        print(f"[Error] Failed to fetch top scorers data: {str(e)}")
-        return jsonify({"status": "error", "message": "Failed to retrieve top scorers data."}), 500
+        print(f"[Error] Failed to fetch top scorers data for {comp_code}: {str(e)}")
+        return jsonify({"status": "error", "message": f"Failed to retrieve top scorers data for {comp_code}."}), 500
 
 @football_bp.route('/top-assists', methods=['GET'])
 def get_top_assists():
+    comp_code = request.args.get('competition', 'PL').upper()
     try:
-        players = list(_get_scorers_raw())
+        players = list(_get_scorers_raw(comp_code))
         assists_data = [p for p in players if p.get('assists') is not None and p.get('assists') > 0]
         sorted_assists = sorted(assists_data, key=lambda x: x['assists'], reverse=True)
         return jsonify({"status": "success", "data": sorted_assists}), 200
     except requests.exceptions.RequestException as e:
-        print(f"[Error] Failed to fetch top assists data: {str(e)}")
-        return jsonify({"status": "error", "message": "Failed to retrieve top assists data."}), 500
+        print(f"[Error] Failed to fetch top assists data for {comp_code}: {str(e)}")
+        return jsonify({"status": "error", "message": f"Failed to retrieve top assists data for {comp_code}."}), 500
 
-def _get_finished_matches_raw():
-    cache_key = "upstream:matches:finished"
+def _get_finished_matches_raw(comp_code: str):
+    cache_key = f"upstream:matches:finished:{comp_code}"
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
-    data = _fetch_json(f"{BASE_URL}/matches?status=FINISHED")
+    data = _fetch_json(f"{BASE_URL}/{comp_code}/matches?status=FINISHED")
     matches = sorted(data.get("matches", []), key=lambda x: x['utcDate'], reverse=True)
     _cache_set(cache_key, matches, TTL_RESULTS)
     return matches
 
 @football_bp.route('/results', methods=['GET'])
 def get_results():
+    comp_code = request.args.get('competition', 'PL').upper()
     team_query = request.args.get('team')
     try:
-        matches = list(_get_finished_matches_raw())
+        matches = list(_get_finished_matches_raw(comp_code))
         if team_query:
             tq = team_query.lower()
             matches = [
@@ -139,15 +148,15 @@ def get_results():
             matches = matches[:10]
         return jsonify({"status": "success", "data": matches}), 200
     except requests.exceptions.RequestException as e:
-        print(f"[Error] Failed to fetch match results data: {str(e)}")
-        return jsonify({"status": "error", "message": "Failed to retrieve match results data."}), 500
+        print(f"[Error] Failed to fetch match results data for {comp_code}: {str(e)}")
+        return jsonify({"status": "error", "message": f"Failed to retrieve match results data for {comp_code}."}), 500
 
-def _get_teams_info_raw():
-    cache_key = "upstream:teams:pl:info"
+def _get_teams_info_raw(comp_code: str):
+    cache_key = f"upstream:teams:{comp_code}:info"
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
-    data = _fetch_json(f"{BASE_URL}/teams")
+    data = _fetch_json(f"{BASE_URL}/{comp_code}/teams")
     teams = data.get('teams', [])
     team_info = []
     for t in teams:
@@ -166,9 +175,10 @@ def _get_teams_info_raw():
 
 @football_bp.route('/teams', methods=['GET'])
 def get_teams():
+    comp_code = request.args.get('competition', 'PL').upper()
     team_query = request.args.get('team')
     try:
-        team_info = list(_get_teams_info_raw())
+        team_info = list(_get_teams_info_raw(comp_code))
         if team_query:
             tq = team_query.lower()
             team_info = [
@@ -178,8 +188,8 @@ def get_teams():
             ]
         return jsonify({"status": "success", "data": team_info}), 200
     except requests.exceptions.RequestException as e:
-        print(f"[Error] Failed to fetch teams data: {str(e)}")
-        return jsonify({"status": "error", "message": "Failed to retrieve teams data."}), 500
+        print(f"[Error] Failed to fetch teams data for {comp_code}: {str(e)}")
+        return jsonify({"status": "error", "message": f"Failed to retrieve teams data for {comp_code}."}), 500
 
 @football_bp.route('/squad/<int:team_id>', methods=['GET'])
 def get_squad(team_id):
@@ -188,6 +198,7 @@ def get_squad(team_id):
     if cached is not None:
         return jsonify(cached), 200
     try:
+        # Endpoint ini unik karena tidak butuh kode kompetisi, langsung pakai ID tim universal
         url = f"http://api.football-data.org/v4/teams/{team_id}"
         data = _fetch_json(url)
         squad = data.get('squad', [])
