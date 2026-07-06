@@ -1,38 +1,25 @@
-from flask import Blueprint, request, jsonify
 import requests
-import os
+from flask import Blueprint, request, jsonify
+
 from config import supabase
+from services.external_api import fetch_json
 
 prediction_bp = Blueprint('prediction_bp', __name__)
 
-API_KEY = os.getenv("FOOTBALL_API_KEY")
-BASE_URL = "https://api.football-data.org/v4"
-HEADERS = {"X-Auth-Token": API_KEY}
+MATCHES_BASE_URL = "https://api.football-data.org/v4/matches"
 
-@prediction_bp.route('/prediction/<int:match_id>/analytics', methods=['GET'])
-def get_match_analytics(match_id):
-    """Mengambil data Head-to-Head dan menghitung probabilitas kemenangan secara manual."""
-    url = f"{BASE_URL}/matches/{match_id}/head2head"
-    response = requests.get(url, headers=HEADERS)
-    
-    if response.status_code != 200:
-        return jsonify({"status": "error", "message": "Gagal mengambil data Head-to-Head."}), response.status_code
-    
-    data = response.json()
-    
-    # Ambil ID tim tuan rumah saat ini untuk patokan
+
+def _build_analytics(data: dict) -> dict:
     current_home_team_id = data.get('aggregates', {}).get('homeTeam', {}).get('id')
-    
-    # Bypass aggregates dari API, hitung manual dari riwayat 'matches'
     matches = data.get('matches', [])
     home_wins = 0
     away_wins = 0
     draws = 0
-    
+
     for match in matches:
         winner = match.get('score', {}).get('winner')
         past_home_id = match.get('homeTeam', {}).get('id')
-        
+
         if winner == 'DRAW':
             draws += 1
         elif winner == 'HOME_TEAM':
@@ -48,7 +35,6 @@ def get_match_analytics(match_id):
 
     total_calculated_matches = home_wins + away_wins + draws
 
-    # Kalkulasi probabilitas berdasarkan data yang benar-benar ada
     if total_calculated_matches > 0:
         home_prob = round((home_wins / total_calculated_matches) * 100, 1)
         away_prob = round((away_wins / total_calculated_matches) * 100, 1)
@@ -56,27 +42,37 @@ def get_match_analytics(match_id):
     else:
         home_prob = away_prob = draw_prob = 0
 
-    insight = {
+    return {
         "api_reported_total_matches": data.get('aggregates', {}).get('numberOfMatches', 0),
         "matches_analyzed": total_calculated_matches,
         "home_win_probability": f"{home_prob}%",
         "away_win_probability": f"{away_prob}%",
         "draw_probability": f"{draw_prob}%",
-        "recommendation": "Gunakan persentase ini sebagai referensi sebelum menebak skor!"
+        "recommendation": "Gunakan persentase ini sebagai referensi sebelum menebak skor!",
     }
-    
-    return jsonify({"status": "success", "data": insight}), 200
+
+
+@prediction_bp.route('/prediction/<int:match_id>/analytics', methods=['GET'])
+def get_match_analytics(match_id):
+    """Mengambil data Head-to-Head dan menghitung probabilitas kemenangan secara manual."""
+    try:
+        data = fetch_json(f"{MATCHES_BASE_URL}/{match_id}/head2head")
+        insight = _build_analytics(data)
+        return jsonify({"status": "success", "data": insight}), 200
+    except requests.exceptions.RequestException as e:
+        print(f"[Error] Failed to fetch H2H analytics for match {match_id}: {str(e)}")
+        return jsonify({"status": "error", "message": "Gagal mengambil data Head-to-Head."}), 502
+
 
 @prediction_bp.route('/prediction', methods=['POST'])
 def submit_prediction():
     """Menyimpan tebakan skor user ke Supabase."""
     data = request.json
-    
-    # Validasi kelengkapan data
+
     required_fields = ['match_id', 'predicted_home_score', 'predicted_away_score']
     if not data or not all(field in data for field in required_fields):
         return jsonify({"status": "error", "message": "Data prediksi tidak lengkap."}), 400
-        
+
     user_id = data.get("user_id")
     if not user_id:
         return jsonify({"status": "error", "message": "User ID parameter is required."}), 400
@@ -87,7 +83,7 @@ def submit_prediction():
         "home_team": data.get("home_team", "Unknown"),
         "away_team": data.get("away_team", "Unknown"),
         "predicted_home_score": data["predicted_home_score"],
-        "predicted_away_score": data["predicted_away_score"]
+        "predicted_away_score": data["predicted_away_score"],
     }
 
     try:
@@ -96,62 +92,52 @@ def submit_prediction():
     except Exception as e:
         print(f"[Error] Failed to save prediction: {str(e)}")
         return jsonify({"status": "error", "message": "Gagal menyimpan prediksi."}), 500
-    
+
+
 @prediction_bp.route('/prediction/<int:match_id>/evaluate', methods=['PUT'])
 def evaluate_predictions(match_id):
     """Mengevaluasi semua tebakan user untuk pertandingan yang sudah selesai."""
-    # Tarik skor asli dari API
-    url = f"{BASE_URL}/matches/{match_id}"
-    response = requests.get(url, headers=HEADERS)
-    
-    if response.status_code != 200:
-        return jsonify({"status": "error", "message": "Gagal mengambil data pertandingan dari API."}), response.status_code
-    
-    match_data = response.json()
-    
-    # Pastikan pertandingan sudah selesai
+    try:
+        match_data = fetch_json(f"{MATCHES_BASE_URL}/{match_id}")
+    except requests.exceptions.RequestException as e:
+        print(f"[Error] Failed to fetch match data for evaluation {match_id}: {str(e)}")
+        return jsonify({"status": "error", "message": "Gagal mengambil data pertandingan dari API."}), 502
+
     if match_data.get('status') != 'FINISHED':
         return jsonify({"status": "error", "message": "Pertandingan belum selesai, belum bisa dievaluasi."}), 400
-        
+
     actual_home = match_data['score']['fullTime']['home']
     actual_away = match_data['score']['fullTime']['away']
-    
-    # Ambil semua tebakan yang masih 'pending' untuk match ini di Supabase
+
     try:
         pending_preds = supabase.table('predictions').select('*').eq('match_id', match_id).eq('status', 'pending').execute()
-        
+
         if not pending_preds.data:
             return jsonify({"status": "success", "message": "Tidak ada prediksi pending untuk dievaluasi."}), 200
-            
+
         evaluated_count = 0
-        
-        # Bandingkan tebakan dengan skor asli
+
         for pred in pending_preds.data:
             pred_id = pred['id']
             pred_home = pred['predicted_home_score']
             pred_away = pred['predicted_away_score']
-            
-            # Logika Cek Status (Bisa dibikin lebih kompleks kalau mau hitung poin)
-            if pred_home == actual_home and pred_away == actual_away:
-                status = 'correct'
-            else:
-                status = 'incorrect'
-                
-            # Update status ke Supabase
+
+            status = 'correct' if pred_home == actual_home and pred_away == actual_away else 'incorrect'
+
             supabase.table('predictions').update({
                 'actual_home_score': actual_home,
                 'actual_away_score': actual_away,
-                'status': status
+                'status': status,
             }).eq('id', pred_id).execute()
-            
+
             evaluated_count += 1
-            
+
         return jsonify({
-            "status": "success", 
+            "status": "success",
             "message": f"Berhasil mengevaluasi {evaluated_count} tebakan.",
-            "actual_score": f"{actual_home} - {actual_away}"
+            "actual_score": f"{actual_home} - {actual_away}",
         }), 200
-        
+
     except Exception as e:
         print(f"[Error] Gagal mengevaluasi prediksi: {str(e)}")
         return jsonify({"status": "error", "message": "Terjadi kesalahan internal saat evaluasi."}), 500
