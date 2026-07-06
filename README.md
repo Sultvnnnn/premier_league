@@ -32,7 +32,7 @@ cd premier_league
 
 # Create & activate venv
 python -m venv venv
-# Windows: venv\Scripts\activate
+# Windows: source venv/Scripts/activate
 # Mac/Linux: source venv/bin/activate
 
 # Install dependencies
