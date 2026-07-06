@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Home — Football Hub{% endblock %}
+{% block page_title %}Home{% endblock %}
+{% block page_subtitle %}Upcoming matches — favorite team first{% endblock %}
+
+{% block content %}
+<div id="favoriteBanner" class="section-heading" style="display:none">
+  ⭐ <span id="favoriteTeamLabel"></span> fixtures
+</div>
+<div id="fixturesList" class="matches-grid">
+  <div class="loading-state"><div class="spinner"></div><p>Loading fixtures...</p></div>
+</div>
+{% endblock %}
+
+{% block modals %}
+{% include "partials/prediction-modal.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/pages/home.js') }}"></script>
+{% endblock %}

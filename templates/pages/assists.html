@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Top Assists — Football Hub{% endblock %}
+{% block page_title %}Top Assists{% endblock %}
+{% block page_subtitle %}Most assists{% endblock %}
+
+{% block content %}
+<div id="assistsList" class="players-grid">
+  <div class="loading-state"><div class="spinner"></div><p>Loading top assists...</p></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/pages/assists.js') }}"></script>
+{% endblock %}

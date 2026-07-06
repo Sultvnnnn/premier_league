@@ -1,0 +1,30 @@
+<div id="predictionModal" class="modal-overlay">
+  <div class="modal-container modal-sm">
+    <div class="modal-header">
+      <div class="modal-team-info">
+        <div>
+          <h2>Score Prediction</h2>
+          <p>View analytics & submit your guess</p>
+        </div>
+      </div>
+      <button class="modal-close" id="predictionClose" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div id="predictionAnalytics"></div>
+      <div class="prediction-form">
+        <div>
+          <div class="prediction-team" id="predictionHomeTeam">Home</div>
+          <input type="number" id="predHomeScore" class="prediction-score-input" min="0" max="20" placeholder="0" />
+        </div>
+        <div class="prediction-vs">—</div>
+        <div>
+          <div class="prediction-team" id="predictionAwayTeam">Away</div>
+          <input type="number" id="predAwayScore" class="prediction-score-input" min="0" max="20" placeholder="0" />
+        </div>
+      </div>
+      <button class="btn-primary btn-full" id="submitPrediction" type="button" style="margin-top:20px;">Submit Prediction</button>
+    </div>
+  </div>
+</div>

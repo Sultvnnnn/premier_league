@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Top Scorers — Football Hub{% endblock %}
+{% block page_title %}Top Scorers{% endblock %}
+{% block page_subtitle %}Golden boot race{% endblock %}
+
+{% block content %}
+<div id="scorersList" class="players-grid">
+  <div class="loading-state"><div class="spinner"></div><p>Loading top scorers...</p></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/pages/scorers.js') }}"></script>
+{% endblock %}

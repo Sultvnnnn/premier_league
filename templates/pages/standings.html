@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Standings — Football Hub{% endblock %}
+{% block page_title %}Standings{% endblock %}
+{% block page_subtitle %}League table{% endblock %}
+
+{% block content %}
+<div class="stats-strip" id="statsStrip">
+  <div class="stat-card loading-pulse"><div class="stat-value">—</div><div class="stat-label">Matchday</div></div>
+  <div class="stat-card loading-pulse"><div class="stat-value">—</div><div class="stat-label">Leader</div></div>
+  <div class="stat-card loading-pulse"><div class="stat-value">—</div><div class="stat-label">Top Points</div></div>
+  <div class="stat-card loading-pulse"><div class="stat-value">—</div><div class="stat-label">Top Goals</div></div>
+</div>
+<div class="table-card">
+  <div class="table-header-row">
+    <div class="col-pos">#</div>
+    <div class="col-team">Club</div>
+    <div class="col-stat">MP</div>
+    <div class="col-stat">W</div>
+    <div class="col-stat">D</div>
+    <div class="col-stat">L</div>
+    <div class="col-stat">GF</div>
+    <div class="col-stat">GA</div>
+    <div class="col-stat">GD</div>
+    <div class="col-pts">PTS</div>
+    <div class="col-form">Form</div>
+  </div>
+  <div id="standingsBody" class="table-body">
+    <div class="loading-state"><div class="spinner"></div><p>Loading standings...</p></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/pages/standings.js') }}"></script>
+{% endblock %}

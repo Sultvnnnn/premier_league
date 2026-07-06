@@ -17,11 +17,66 @@ app = Flask(
 
 CORS(app)
 
-@app.route("/")
-def index():
-    return render_template("index.html")
 
-# Mendaftarkan semua routes dengan otomatisasi prefix '/api'
+# ── Page Routes ────────────────────────────────────────────────
+
+@app.route("/")
+def home():
+    return render_template("pages/home.html", active_page="home")
+
+
+@app.route("/standings")
+def standings():
+    return render_template("pages/standings.html", active_page="standings")
+
+
+@app.route("/fixtures")
+def fixtures():
+    return render_template("pages/fixtures.html", active_page="fixtures")
+
+
+@app.route("/results")
+def results():
+    return render_template("pages/results.html", active_page="results")
+
+
+@app.route("/scorers")
+def scorers():
+    return render_template("pages/scorers.html", active_page="scorers")
+
+
+@app.route("/assists")
+def assists():
+    return render_template("pages/assists.html", active_page="assists")
+
+
+@app.route("/teams")
+def teams():
+    return render_template("pages/teams.html", active_page="teams")
+
+
+@app.route("/watchlist")
+def watchlist():
+    return render_template("pages/watchlist.html", active_page="watchlist")
+
+
+@app.route("/profile")
+def profile():
+    return render_template("pages/profile.html", active_page="profile")
+
+
+@app.route("/login")
+def login():
+    return render_template("pages/login.html", active_page="login")
+
+
+@app.route("/register")
+def register():
+    return render_template("pages/register.html", active_page="register")
+
+
+# ── API Blueprints ─────────────────────────────────────────────
+
 app.register_blueprint(football_bp, url_prefix='/api')
 app.register_blueprint(auth_bp, url_prefix='/api')
 app.register_blueprint(watchlist_bp, url_prefix='/api')
