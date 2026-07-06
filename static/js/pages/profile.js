@@ -22,7 +22,6 @@ function updateDisplay(profile) {
   $('#username').value = profile.username || '';
   $('#fullName').value = profile.full_name || '';
   $('#bio').value = profile.bio || '';
-  $('#favoriteTeamId').value = profile.favorite_team_id || '';
   $('#favoriteTeamName').value = profile.favorite_team_name || '';
 }
 
@@ -49,7 +48,6 @@ $('#profileForm')?.addEventListener('submit', async (e) => {
       username: $('#username').value.trim(),
       full_name: $('#fullName').value.trim(),
       bio: $('#bio').value.trim(),
-      favorite_team_id: $('#favoriteTeamId').value ? parseInt($('#favoriteTeamId').value, 10) : null,
       favorite_team_name: $('#favoriteTeamName').value.trim(),
     });
     showToast('Profile saved!');

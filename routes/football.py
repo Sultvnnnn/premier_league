@@ -42,22 +42,124 @@ def _fetch_json(url: str) -> dict:
 
 @football_bp.route('/standings', methods=['GET'])
 def get_standings():
-    # Tangkap query parameter, default ke Premier League (PL) jika kosong
     comp_code = request.args.get('competition', 'PL').upper()
-    cache_key = f"standings:{comp_code}:table"
-    
+    group_query = request.args.get('group')
+    cache_key = f"standings:{comp_code}:{group_query or 'default'}"
+
     cached = _cache_get(cache_key)
     if cached is not None:
-        return jsonify({"status": "success", "data": cached}), 200
-        
+        return jsonify({"status": "success", **cached}), 200
+
     try:
         data = _fetch_json(f"{BASE_URL}/{comp_code}/standings")
-        standings = data['standings'][0]['table']
-        _cache_set(cache_key, standings, TTL_STANDINGS)
-        return jsonify({"status": "success", "data": standings}), 200
+        all_standings = data.get('standings', [])
+
+        if comp_code == 'WC':
+            groups = [
+                {"group": s['group'], "table": s['table']}
+                for s in all_standings if s.get('type') == 'TOTAL'
+            ]
+            group_names = [g['group'] for g in groups]
+
+            selected = groups[0]
+            if group_query:
+                match = next(
+                    (g for g in groups if g['group'].lower() == group_query.lower()),
+                    None,
+                )
+                if match:
+                    selected = match
+
+            payload = {
+                "data": {
+                    "table": selected['table'],
+                    "group": selected['group'],
+                    "groups": group_names,
+                }
+            }
+        else:
+            payload = {
+                "data": {
+                    "table": all_standings[0]['table'] if all_standings else [],
+                    "group": None,
+                    "groups": None,
+                }
+            }
+
+        _cache_set(cache_key, payload, TTL_STANDINGS)
+        return jsonify({"status": "success", **payload}), 200
     except requests.exceptions.RequestException as e:
         print(f"[Error] Failed to fetch standings data for {comp_code}: {str(e)}")
         return jsonify({"status": "error", "message": f"Failed to retrieve {comp_code} standings data."}), 500
+
+
+KNOCKOUT_STAGES = [
+    ('LAST_32', 'Round of 32'),
+    ('LAST_16', 'Round of 16'),
+    ('QUARTER_FINALS', 'Quarter-finals'),
+    ('SEMI_FINALS', 'Semi-finals'),
+    ('THIRD_PLACE', '3rd Place'),
+    ('FINAL', 'Final'),
+]
+
+
+def _format_bracket_match(match):
+    home = match.get('homeTeam') or {}
+    away = match.get('awayTeam') or {}
+    score = match.get('score', {}).get('fullTime') or {}
+    return {
+        "id": match.get('id'),
+        "stage": match.get('stage'),
+        "status": match.get('status'),
+        "utcDate": match.get('utcDate'),
+        "homeTeam": {
+            "name": home.get('name') or home.get('shortName'),
+            "shortName": home.get('shortName') or home.get('name'),
+            "crest": home.get('crest'),
+        },
+        "awayTeam": {
+            "name": away.get('name') or away.get('shortName'),
+            "shortName": away.get('shortName') or away.get('name'),
+            "crest": away.get('crest'),
+        },
+        "score": {
+            "home": score.get('home'),
+            "away": score.get('away'),
+        },
+    }
+
+
+@football_bp.route('/bracket', methods=['GET'])
+def get_bracket():
+    comp_code = request.args.get('competition', 'WC').upper()
+    cache_key = f"bracket:{comp_code}"
+
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify({"status": "success", "data": cached}), 200
+
+    try:
+        data = _fetch_json(f"{BASE_URL}/{comp_code}/matches")
+        matches = data.get('matches', [])
+        knockout = [m for m in matches if m.get('stage') != 'GROUP_STAGE']
+
+        bracket = {}
+        for stage_code, stage_label in KNOCKOUT_STAGES:
+            stage_matches = sorted(
+                [m for m in knockout if m.get('stage') == stage_code],
+                key=lambda x: x.get('utcDate') or '',
+            )
+            if stage_matches:
+                bracket[stage_code] = {
+                    "label": stage_label,
+                    "matches": [_format_bracket_match(m) for m in stage_matches],
+                }
+
+        _cache_set(cache_key, bracket, TTL_FIXTURES)
+        return jsonify({"status": "success", "data": bracket}), 200
+    except requests.exceptions.RequestException as e:
+        print(f"[Error] Failed to fetch bracket data for {comp_code}: {str(e)}")
+        return jsonify({"status": "error", "message": f"Failed to retrieve {comp_code} bracket data."}), 500
 
 def _get_scheduled_matches_raw(comp_code: str):
     cache_key = f"upstream:matches:scheduled:{comp_code}"

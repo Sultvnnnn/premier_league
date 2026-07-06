@@ -1,10 +1,11 @@
 import { fetchAPI } from '../core/api.js';
 import { getUser } from '../core/auth.js';
-import { compQuery, initCompetitionSwitcher } from '../core/competition.js';
+import { getCompetition, compQuery, initCompetitionSwitcher } from '../core/competition.js';
 import {
   $, loadingState, emptyState, errorState, sortByFavoriteTeam,
 } from '../core/utils.js';
 import { matchCard } from '../components/cards.js';
+import { renderBracket } from '../components/bracket.js';
 import { initPredictionModal, bindMatchActions } from '../components/prediction-modal.js';
 
 async function loadProfile() {
@@ -17,6 +18,19 @@ async function loadProfile() {
     return json.status === 'success' ? json.data : null;
   } catch {
     return null;
+  }
+}
+
+function updateHomeView() {
+  const isWC = getCompetition() === 'WC';
+  $('#plHome').style.display = isWC ? 'none' : 'block';
+  $('#wcHome').style.display = isWC ? 'block' : 'none';
+
+  const subtitle = document.querySelector('.header-title p');
+  if (subtitle) {
+    subtitle.textContent = isWC
+      ? 'World Cup knockout bracket'
+      : 'Upcoming matches — favorite team first';
   }
 }
 
@@ -55,7 +69,29 @@ async function loadFixtures() {
   }
 }
 
+async function loadBracket() {
+  const container = $('#bracketContainer');
+  container.innerHTML = loadingState('Loading tournament bracket...');
+
+  try {
+    const data = await fetchAPI(`/bracket?${compQuery()}`);
+    container.innerHTML = renderBracket(data);
+  } catch (err) {
+    container.innerHTML = errorState('Failed to load bracket.');
+    console.error('[Bracket]', err);
+  }
+}
+
+function loadHome() {
+  updateHomeView();
+  if (getCompetition() === 'WC') {
+    loadBracket();
+  } else {
+    loadFixtures();
+  }
+}
+
 initPredictionModal();
 bindMatchActions(document);
-initCompetitionSwitcher(() => loadFixtures());
-loadFixtures();
+initCompetitionSwitcher(() => loadHome());
+loadHome();
