@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Login — Football Hub{% endblock %}
+{% block page_title %}Login{% endblock %}
+{% block page_subtitle %}Sign in to your account{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/features.css') }}" />
+{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card">
+    <h2>Welcome Back</h2>
+    <p>Sign in to access profile, watchlist & predictions.</p>
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required placeholder="you@example.com" />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required placeholder="••••••••" />
+      </div>
+      <button class="btn-primary btn-full" type="submit">Login</button>
+      <p class="form-error" id="loginError"></p>
+    </form>
+    <div class="auth-footer">
+      Don't have an account? <a href="{{ url_for('register') }}">Register</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/pages/login.js') }}"></script>
+{% endblock %}

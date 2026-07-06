@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Results — Football Hub{% endblock %}
+{% block page_title %}Results{% endblock %}
+{% block page_subtitle %}Recent finished matches{% endblock %}
+
+{% block content %}
+<div class="section-toolbar">
+  <div class="filter-group">
+    <input type="text" id="resultsTeamFilter" class="filter-input" placeholder="Filter by team..." />
+    <button class="btn-filter" id="resultsFilterBtn" type="button">Search</button>
+    <button class="btn-clear" id="resultsClearBtn" type="button">Clear</button>
+  </div>
+</div>
+<div id="resultsList" class="matches-grid">
+  <div class="loading-state"><div class="spinner"></div><p>Loading results...</p></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/pages/results.js') }}"></script>
+{% endblock %}

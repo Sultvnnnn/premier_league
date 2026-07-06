@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Teams — Football Hub{% endblock %}
+{% block page_title %}Teams{% endblock %}
+{% block page_subtitle %}Club details & squads{% endblock %}
+
+{% block content %}
+<div class="section-toolbar">
+  <div class="filter-group">
+    <input type="text" id="teamsTeamFilter" class="filter-input" placeholder="Search team..." />
+    <button class="btn-filter" id="teamsFilterBtn" type="button">Search</button>
+    <button class="btn-clear" id="teamsClearBtn" type="button">Clear</button>
+  </div>
+</div>
+<div id="teamsList" class="teams-grid">
+  <div class="loading-state"><div class="spinner"></div><p>Loading teams...</p></div>
+</div>
+{% endblock %}
+
+{% block modals %}
+{% include "partials/squad-modal.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/pages/teams.js') }}"></script>
+{% endblock %}

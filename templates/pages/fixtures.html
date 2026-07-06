@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Fixtures — Football Hub{% endblock %}
+{% block page_title %}Fixtures{% endblock %}
+{% block page_subtitle %}Upcoming scheduled matches{% endblock %}
+
+{% block content %}
+<div class="section-toolbar">
+  <div class="filter-group">
+    <input type="text" id="fixturesTeamFilter" class="filter-input" placeholder="Filter by team..." />
+    <button class="btn-filter" id="fixturesFilterBtn" type="button">Search</button>
+    <button class="btn-clear" id="fixturesClearBtn" type="button">Clear</button>
+  </div>
+</div>
+<div id="fixturesList" class="matches-grid">
+  <div class="loading-state"><div class="spinner"></div><p>Loading fixtures...</p></div>
+</div>
+{% endblock %}
+
+{% block modals %}
+{% include "partials/prediction-modal.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/pages/fixtures.js') }}"></script>
+{% endblock %}

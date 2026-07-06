@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Watchlist — Football Hub{% endblock %}
+{% block page_title %}Watchlist{% endblock %}
+{% block page_subtitle %}Your saved matches & notes{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/features.css') }}" />
+{% endblock %}
+
+{% block content %}
+<div id="watchlistContainer" class="watchlist-grid">
+  <div class="loading-state"><div class="spinner"></div><p>Loading watchlist...</p></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/pages/watchlist.js') }}"></script>
+{% endblock %}
