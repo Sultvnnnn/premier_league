@@ -366,3 +366,153 @@
   .analytics-grid { grid-template-columns: 1fr; }
   .watchlist-item { grid-template-columns: 1fr; }
 }
+
+/* Group tabs (World Cup standings) */
+.group-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.group-tab {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.group-tab:hover {
+  border-color: var(--purple-primary);
+  color: var(--text-primary);
+}
+
+.group-tab.active {
+  background: linear-gradient(135deg, var(--purple-primary), var(--pink));
+  border-color: transparent;
+  color: white;
+}
+
+/* Tournament bracket */
+.bracket-wrap {
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.bracket-board {
+  display: flex;
+  gap: 20px;
+  min-width: max-content;
+  padding: 4px 0;
+}
+
+.bracket-round {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 200px;
+}
+
+.bracket-round-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--purple-light);
+  text-align: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.bracket-round-matches {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: space-around;
+  flex: 1;
+}
+
+.bracket-match {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: all var(--transition);
+}
+
+.bracket-match:hover {
+  border-color: var(--border-glow);
+  transform: translateY(-1px);
+}
+
+.bracket-match.finished {
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.bracket-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.bracket-team.has-score .bracket-team-score {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.bracket-crest {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.bracket-crest-placeholder {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--purple-glow);
+  color: var(--purple-light);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bracket-team-name {
+  flex: 1;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bracket-team-score {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-muted);
+  min-width: 16px;
+  text-align: center;
+}
+
+.bracket-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 12px;
+}
+
+@media (max-width: 768px) {
+  .bracket-round { min-width: 170px; }
+}

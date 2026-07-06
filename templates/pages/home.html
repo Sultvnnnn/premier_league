@@ -4,12 +4,24 @@
 {% block page_title %}Home{% endblock %}
 {% block page_subtitle %}Upcoming matches — favorite team first{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/features.css') }}" />
+{% endblock %}
+
 {% block content %}
-<div id="favoriteBanner" class="section-heading" style="display:none">
-  ⭐ <span id="favoriteTeamLabel"></span> fixtures
+<div id="plHome">
+  <div id="favoriteBanner" class="section-heading" style="display:none">
+    ⭐ <span id="favoriteTeamLabel"></span> fixtures
+  </div>
+  <div id="fixturesList" class="matches-grid">
+    <div class="loading-state"><div class="spinner"></div><p>Loading fixtures...</p></div>
+  </div>
 </div>
-<div id="fixturesList" class="matches-grid">
-  <div class="loading-state"><div class="spinner"></div><p>Loading fixtures...</p></div>
+
+<div id="wcHome" style="display:none">
+  <div id="bracketContainer" class="bracket-wrap">
+    <div class="loading-state"><div class="spinner"></div><p>Loading tournament bracket...</p></div>
+  </div>
 </div>
 {% endblock %}
 
