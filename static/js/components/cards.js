@@ -1,29 +1,67 @@
 import {
   formatDate, formatDateShort, crestImg, teamMatchesFavorite, parseColors,
+  isMatchPredictable,
 } from '../core/utils.js';
 
-export function matchCard(match, isResult, options = {}) {
-  const { showActions = false, favoriteName = '' } = options;
-  const home = match.homeTeam;
-  const away = match.awayTeam;
+function renderMatchScoreBlock(match, prediction) {
   const score = match.score?.fullTime;
   const hasScore = score && (score.home !== null || score.away !== null);
+  const hasPred = Boolean(prediction);
+  const predStatus = prediction?.status || 'pending';
+
+  if (!hasScore && !hasPred) {
+    return `<div class="match-vs-text">VS</div>`;
+  }
+
+  const actualHome = hasScore ? (score.home ?? '—') : null;
+  const actualAway = hasScore ? (score.away ?? '—') : null;
+  const predHome = hasPred ? prediction.predicted_home_score : null;
+  const predAway = hasPred ? prediction.predicted_away_score : null;
+
+  return `
+    <div class="match-scoreboard ${hasPred ? `has-prediction ${predStatus}` : ''}">
+      ${hasScore ? `
+        <div class="match-score-row actual" title="Skor aktual">
+          <span>${actualHome}</span>
+          <span>${actualAway}</span>
+        </div>
+      ` : ''}
+      ${hasPred ? `
+        <div class="match-score-row prediction ${hasScore ? '' : 'prediction-only'}" title="Prediksi anda">
+          <span>${predHome}</span>
+          <span>${predAway}</span>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+export function matchCard(match, isResult, options = {}) {
+  const { showActions = false, favoriteName = '', userPrediction = null } = options;
+  const home = match.homeTeam;
+  const away = match.awayTeam;
   const isFavorite = teamMatchesFavorite(match, favoriteName);
+  const canPredict = showActions && isMatchPredictable(match);
+  const prediction = userPrediction || null;
 
-  const scoreHtml = hasScore
-    ? `<div class="match-score">${score.home ?? '?'} – ${score.away ?? '?'}</div>`
-    : `<div class="match-vs-text">VS</div>`;
+  const statusClass = isResult || match.status === 'FINISHED' ? 'finished' : 'scheduled';
+  const statusText = isResult || match.status === 'FINISHED'
+    ? 'Full Time'
+    : formatDateShort(match.utcDate);
 
-  const statusClass = isResult ? 'finished' : 'scheduled';
-  const statusText = isResult ? 'Full Time' : formatDateShort(match.utcDate);
+  const predictLabel = prediction ? 'Edit guess' : 'Predict';
+  const predictBtn = canPredict ? `
+    <button class="match-action-btn primary" data-action="predict" data-match-id="${match.id}"
+      data-home="${home?.name || ''}" data-away="${away?.name || ''}"
+      data-status="${match.status || ''}">${predictLabel}</button>
+  ` : '';
 
   const actionsHtml = showActions ? `
     <div class="match-actions">
       <button class="match-action-btn" data-action="watchlist" data-match-id="${match.id}"
         data-home="${home?.name || ''}" data-away="${away?.name || ''}"
         data-date="${match.utcDate || ''}">Save</button>
-      <button class="match-action-btn primary" data-action="predict" data-match-id="${match.id}"
-        data-home="${home?.name || ''}" data-away="${away?.name || ''}">Predict</button>
+      ${predictBtn}
     </div>
   ` : '';
 
@@ -36,7 +74,7 @@ export function matchCard(match, isResult, options = {}) {
           ${crestImg(home?.crest, home?.name || '', 'match-team-crest')}
           <div class="match-team-name">${home?.shortName || home?.name || '—'}</div>
         </div>
-        <div class="match-vs">${scoreHtml}</div>
+        <div class="match-vs">${renderMatchScoreBlock(match, prediction)}</div>
         <div class="match-team">
           ${crestImg(away?.crest, away?.name || '', 'match-team-crest')}
           <div class="match-team-name">${away?.shortName || away?.name || '—'}</div>

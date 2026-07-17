@@ -141,6 +141,17 @@ export function showToast(message, type = 'success') {
   setTimeout(() => toastEl.classList.remove('show'), 3000);
 }
 
+/** Prediksi hanya untuk match yang belum kick-off (SCHEDULED / TIMED). */
+export function isMatchPredictable(matchOrStatus) {
+  const status = String(
+    typeof matchOrStatus === 'string'
+      ? matchOrStatus
+      : matchOrStatus?.status || '',
+  ).toUpperCase();
+
+  return status === 'SCHEDULED' || status === 'TIMED';
+}
+
 export function teamMatchesFavorite(match, favoriteName) {
   if (!favoriteName) return false;
   const fav = favoriteName.toLowerCase();
