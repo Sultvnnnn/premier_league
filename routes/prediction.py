@@ -196,9 +196,36 @@ def tournament_winner():
         print(f"[Error] Gagal simulasi tournament winner: {str(e)}")
         return jsonify({"status": "error", "message": "Gagal melakukan simulasi."}), 500
 
+@prediction_bp.route('/prediction', methods=['GET'])
+def get_user_predictions():
+    """Ambil semua tebakan skor user dari Supabase."""
+    if not supabase:
+        return jsonify({"status": "error", "message": "Database connection is not configured."}), 500
+
+    user_id = request.args.get('user_id')
+    if not user_id:
+        return jsonify({"status": "error", "message": "User ID parameter is required."}), 400
+
+    try:
+        response = (
+            supabase.table('predictions')
+            .select('*')
+            .eq('user_id', user_id)
+            .order('id', desc=True)
+            .execute()
+        )
+        return jsonify({"status": "success", "data": response.data or []}), 200
+    except Exception as e:
+        print(f"[Error] Failed to fetch predictions: {str(e)}")
+        return jsonify({"status": "error", "message": "Gagal mengambil data prediksi."}), 500
+
+
 @prediction_bp.route('/prediction', methods=['POST'])
 def submit_prediction():
-    """Menyimpan tebakan skor user ke Supabase."""
+    """Menyimpan tebakan skor user ke Supabase (upsert per user + match)."""
+    if not supabase:
+        return jsonify({"status": "error", "message": "Database connection is not configured."}), 500
+
     data = request.json
 
     required_fields = ['match_id', 'predicted_home_score', 'predicted_away_score']
@@ -209,9 +236,14 @@ def submit_prediction():
     if not user_id:
         return jsonify({"status": "error", "message": "User ID parameter is required."}), 400
 
-    insert_data = {
+    try:
+        match_id = int(data["match_id"])
+    except (TypeError, ValueError):
+        return jsonify({"status": "error", "message": "match_id tidak valid."}), 400
+
+    payload = {
         "user_id": user_id,
-        "match_id": data["match_id"],
+        "match_id": match_id,
         "home_team": data.get("home_team", "Unknown"),
         "away_team": data.get("away_team", "Unknown"),
         "predicted_home_score": data["predicted_home_score"],
@@ -219,8 +251,47 @@ def submit_prediction():
     }
 
     try:
-        response = supabase.table('predictions').insert(insert_data).execute()
-        return jsonify({"status": "success", "message": "Tebakan skor berhasil disimpan!", "data": response.data}), 201
+        existing = (
+            supabase.table('predictions')
+            .select('id, status')
+            .eq('user_id', user_id)
+            .eq('match_id', match_id)
+            .limit(1)
+            .execute()
+        )
+
+        if existing.data:
+            pred_id = existing.data[0]['id']
+            # Jangan overwrite hasil evaluasi kalau sudah dinilai
+            if existing.data[0].get('status') in ('correct', 'incorrect'):
+                return jsonify({
+                    "status": "error",
+                    "message": "Prediksi untuk pertandingan ini sudah dievaluasi dan tidak bisa diubah.",
+                }), 400
+
+            response = (
+                supabase.table('predictions')
+                .update({
+                    "home_team": payload["home_team"],
+                    "away_team": payload["away_team"],
+                    "predicted_home_score": payload["predicted_home_score"],
+                    "predicted_away_score": payload["predicted_away_score"],
+                })
+                .eq('id', pred_id)
+                .execute()
+            )
+            return jsonify({
+                "status": "success",
+                "message": "Tebakan skor berhasil diperbarui!",
+                "data": response.data,
+            }), 200
+
+        response = supabase.table('predictions').insert(payload).execute()
+        return jsonify({
+            "status": "success",
+            "message": "Tebakan skor berhasil disimpan!",
+            "data": response.data,
+        }), 201
     except Exception as e:
         print(f"[Error] Failed to save prediction: {str(e)}")
         return jsonify({"status": "error", "message": "Gagal menyimpan prediksi."}), 500

@@ -4,6 +4,10 @@
 {% block page_title %}Fixtures{% endblock %}
 {% block page_subtitle %}Upcoming scheduled matches{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/features.css') }}" />
+{% endblock %}
+
 {% block content %}
 <div class="section-toolbar">
   <div class="filter-group">

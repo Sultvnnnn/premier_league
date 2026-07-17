@@ -4,9 +4,33 @@ import { getCompetition, compQuery, initCompetitionSwitcher } from '../core/comp
 import {
   $, loadingState, emptyState, errorState, sortByFavoriteTeam,
 } from '../core/utils.js';
+import {
+  loadUserPredictions,
+  getPredictionForMatch,
+  getPredictionMap,
+  getUserPredictionsList,
+  onPredictionSaved,
+} from '../core/predictions.js';
+import { enableDragScroll } from '../core/drag-scroll.js';
 import { matchCard } from '../components/cards.js';
 import { renderBracket } from '../components/bracket.js';
 import { initPredictionModal, bindMatchActions } from '../components/prediction-modal.js';
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function shortTeamName(name) {
+  if (!name) return '—';
+  return String(name)
+    .replace(/\b(FC|CF|AFC|SC)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 async function loadProfile() {
   const user = getUser();
@@ -41,10 +65,12 @@ async function loadFixtures() {
   list.innerHTML = loadingState('Loading fixtures...');
 
   try {
-    const profile = await loadProfile();
+    const [profile, , data] = await Promise.all([
+      loadProfile(),
+      loadUserPredictions(),
+      fetchAPI(`/fixtures?${compQuery()}`),
+    ]);
     const favoriteName = profile?.favorite_team_name || '';
-
-    const data = await fetchAPI(`/fixtures?${compQuery()}`);
     const sorted = sortByFavoriteTeam(data, favoriteName);
 
     if (!sorted.length) {
@@ -61,11 +87,78 @@ async function loadFixtures() {
     }
 
     list.innerHTML = sorted.map((m) =>
-      matchCard(m, false, { showActions: true, favoriteName })
+      matchCard(m, false, {
+        showActions: true,
+        favoriteName,
+        userPrediction: getPredictionForMatch(m.id),
+      })
     ).join('');
   } catch (err) {
     list.innerHTML = errorState('Failed to load fixtures.');
     console.error('[Home]', err);
+  }
+}
+
+async function loadUserPredictionsCard() {
+  const card = $('#userPredictionsCard');
+  if (!card) return;
+
+  const user = getUser();
+  card.style.display = 'block';
+
+  if (!user?.user_id) {
+    card.innerHTML = `
+      <div class="user-predictions-header">
+        <h3>Prediksi anda</h3>
+      </div>
+      <p class="user-predictions-empty">Login untuk melihat prediksi skor anda.</p>
+    `;
+    return;
+  }
+
+  try {
+    await loadUserPredictions();
+    const predictions = getUserPredictionsList();
+
+    if (!predictions.length) {
+      card.innerHTML = `
+        <div class="user-predictions-header">
+          <h3>Prediksi anda</h3>
+        </div>
+        <p class="user-predictions-empty">Belum ada prediksi. Klik Predict di bagan untuk mulai menebak skor.</p>
+      `;
+      return;
+    }
+
+    const items = predictions.map((p) => {
+      const home = shortTeamName(p.home_team || 'Home');
+      const away = shortTeamName(p.away_team || 'Away');
+      const statusClass = p.status || 'pending';
+      return `
+        <div class="user-prediction-item ${statusClass}">
+          <span class="user-prediction-match">
+            ${escapeHtml(home)}
+            <strong class="user-prediction-score">${escapeHtml(p.predicted_home_score)}</strong>
+            <span class="user-prediction-vs">vs</span>
+            ${escapeHtml(away)}
+            <strong class="user-prediction-score">${escapeHtml(p.predicted_away_score)}</strong>
+          </span>
+        </div>
+      `;
+    }).join('');
+
+    card.innerHTML = `
+      <div class="user-predictions-header">
+        <h3>Prediksi anda</h3>
+        <span class="user-predictions-count">${predictions.length} pertandingan</span>
+      </div>
+      <div class="user-predictions-list">
+        ${items}
+      </div>
+    `;
+  } catch (err) {
+    card.innerHTML = errorState('Gagal memuat prediksi anda.');
+    console.error('[UserPredictionsCard]', err);
   }
 }
 
@@ -74,8 +167,12 @@ async function loadBracket() {
   container.innerHTML = loadingState('Loading tournament bracket...');
 
   try {
-    const data = await fetchAPI(`/bracket?${compQuery()}`);
-    container.innerHTML = renderBracket(data);
+    const [, data] = await Promise.all([
+      loadUserPredictions(),
+      fetchAPI(`/bracket?${compQuery()}`),
+    ]);
+    container.innerHTML = renderBracket(data, getPredictionMap());
+    enableDragScroll(container);
   } catch (err) {
     container.innerHTML = errorState('Failed to load bracket.');
     console.error('[Bracket]', err);
@@ -85,8 +182,11 @@ async function loadBracket() {
 function loadHome() {
   updateHomeView();
   if (getCompetition() === 'WC') {
+    loadUserPredictionsCard();
     loadBracket();
   } else {
+    const card = $('#userPredictionsCard');
+    if (card) card.style.display = 'none';
     loadFixtures();
   }
 }
@@ -94,4 +194,5 @@ function loadHome() {
 initPredictionModal();
 bindMatchActions(document);
 initCompetitionSwitcher(() => loadHome());
+onPredictionSaved(() => loadHome());
 loadHome();
